@@ -35,7 +35,8 @@ final class LoginViewModel {
     }
 
     var passwordError: String? {
-        passwordEdited ? Validators.requiredError(password, fieldName: "Password") : nil
+        passwordEdited
+            ? Validators.requiredError(password, fieldName: "Password") : nil
     }
 
     var isFormValid: Bool {
@@ -51,8 +52,13 @@ final class LoginViewModel {
         defer { isLoading = false }
 
         do {
-            let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
-            let response = try await api.login(email: trimmedEmail, password: password)
+            let trimmedEmail = email.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+            let response = try await api.login(
+                email: trimmedEmail,
+                password: password
+            )
             session.login(token: response.token)
         } catch APIError.unauthorized {
             errorMessage = "Invalid email or password."

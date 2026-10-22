@@ -37,10 +37,15 @@ struct MainTabView: View {
         }
     }
 
-    private func placeholder(_ title: String, systemImage: String) -> some View {
+    private func placeholder(_ title: String, systemImage: String) -> some View
+    {
         NavigationStack {
-            ContentUnavailableView(title, systemImage: systemImage, description: Text("Coming soon."))
-                .navigationTitle(title)
+            ContentUnavailableView(
+                title,
+                systemImage: systemImage,
+                description: Text("Coming soon.")
+            )
+            .navigationTitle(title)
         }
     }
 }

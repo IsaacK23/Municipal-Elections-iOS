@@ -14,7 +14,10 @@ struct ErrorStateView: View {
 
     var body: some View {
         ContentUnavailableView {
-            Label("Something Went Wrong", systemImage: "exclamationmark.triangle")
+            Label(
+                "Something Went Wrong",
+                systemImage: "exclamationmark.triangle"
+            )
         } description: {
             Text(message)
         } actions: {
@@ -25,5 +28,8 @@ struct ErrorStateView: View {
 }
 
 #Preview {
-    ErrorStateView(message: APIError.network(URLError(.notConnectedToInternet)).localizedDescription) {}
+    ErrorStateView(
+        message: APIError.network(URLError(.notConnectedToInternet))
+            .localizedDescription
+    ) {}
 }

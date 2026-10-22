@@ -12,7 +12,8 @@ import Foundation
 nonisolated enum Validators {
     static let maxNameLength = 100
     static let minPasswordLength = 6
-    static let emailPattern = "^[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"
+    static let emailPattern =
+        "^[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"
 
     static func isBlank(_ value: String) -> Bool {
         value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -24,7 +25,8 @@ nonisolated enum Validators {
 
     static func isValidEmail(_ value: String) -> Bool {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.range(of: emailPattern, options: .regularExpression) != nil
+        return trimmed.range(of: emailPattern, options: .regularExpression)
+            != nil
     }
 
     static func emailError(_ value: String) -> String? {
@@ -39,7 +41,8 @@ nonisolated enum Validators {
             return error
         }
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.count > maxNameLength ? "Name must be \(maxNameLength) characters or fewer." : nil
+        return trimmed.count > maxNameLength
+            ? "Name must be \(maxNameLength) characters or fewer." : nil
     }
 
     // Matches the server's password rules. ASP.NET Identity only counts
@@ -64,7 +67,9 @@ nonisolated enum Validators {
         return errors
     }
 
-    static func confirmPasswordError(password: String, confirmPassword: String) -> String? {
+    static func confirmPasswordError(password: String, confirmPassword: String)
+        -> String?
+    {
         if isBlank(confirmPassword) {
             return "Confirm Password is required."
         }
@@ -72,6 +77,7 @@ nonisolated enum Validators {
     }
 
     private static func isASCIILetterOrDigit(_ character: Character) -> Bool {
-        ("A"..."Z").contains(character) || ("a"..."z").contains(character) || ("0"..."9").contains(character)
+        ("A"..."Z").contains(character) || ("a"..."z").contains(character)
+            || ("0"..."9").contains(character)
     }
 }

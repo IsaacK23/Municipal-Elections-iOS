@@ -45,8 +45,11 @@ struct RegisterView: View {
                     }
                 }
 
-                SecureField("Confirm Password", text: $viewModel.confirmPassword)
-                    .textContentType(.newPassword)
+                SecureField(
+                    "Confirm Password",
+                    text: $viewModel.confirmPassword
+                )
+                .textContentType(.newPassword)
                 if let error = viewModel.confirmPasswordError {
                     errorText(error)
                 }
