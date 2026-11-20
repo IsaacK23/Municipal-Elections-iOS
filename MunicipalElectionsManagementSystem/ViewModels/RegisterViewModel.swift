@@ -71,13 +71,19 @@ final class RegisterViewModel {
         defer { isLoading = false }
 
         do {
+            let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
             let response = try await api.register(
                 name: name.trimmingCharacters(in: .whitespacesAndNewlines),
-                email: email.trimmingCharacters(in: .whitespacesAndNewlines),
+                email: trimmedEmail,
                 password: password
             )
             // The response includes a token, so the user is logged straight in.
-            session.login(token: response.token)
+            try await session.signIn(
+                token: response.token,
+                email: trimmedEmail,
+                password: password,
+                isNewAccount: true
+            )
         } catch APIError.validation(let messages) {
             serverErrors = messages
         } catch {

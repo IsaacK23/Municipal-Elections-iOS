@@ -59,7 +59,12 @@ final class LoginViewModel {
                 email: trimmedEmail,
                 password: password
             )
-            session.login(token: response.token)
+            try await session.signIn(
+                token: response.token,
+                email: trimmedEmail,
+                password: password,
+                isNewAccount: false
+            )
         } catch APIError.unauthorized {
             errorMessage = "Invalid email or password."
         } catch {

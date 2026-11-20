@@ -8,27 +8,22 @@
 import Foundation
 
 // View models depend on this protocol so previews can use MockAPIClient instead.
+// Election data is always requested for one municipality, identified by its slug,
+// so the API itself only ever returns that municipality's records.
 nonisolated protocol APIClientProtocol: Sendable {
     // Auth
     func register(name: String, email: String, password: String) async throws -> AuthResponse
     func login(email: String, password: String) async throws -> AuthResponse
     func me() async throws -> UserProfile
 
-    // Municipalities and positions
+    // Municipalities
     func municipalities() async throws -> [Municipality]
-    func municipality(id: Int) async throws -> Municipality
-    func positions(municipalityId: Int?) async throws -> [Position]
-    func position(id: Int) async throws -> Position
+    func municipality(slug: String) async throws -> Municipality
 
-    // Candidates
-    func candidates(municipalityId: Int?, positionId: Int?) async throws -> [Candidate]
-    func searchCandidates(name: String, municipalityId: Int?, positionId: Int?) async throws -> [Candidate]
-    func candidate(id: Int) async throws -> Candidate
-
-    // Voting guide
-    func savedCandidates() async throws -> [SavedCandidate]
-    func saveCandidate(candidateId: Int) async throws -> SavedCandidate
-    func deleteSavedCandidate(savedCandidateId: Int) async throws
+    // Positions and candidates for one municipality
+    func positions(slug: String) async throws -> [Position]
+    func candidates(slug: String, search: String?, positionId: Int?) async throws -> [Candidate]
+    func candidate(slug: String, id: Int) async throws -> Candidate
 }
 
 nonisolated final class APIClient: APIClientProtocol {
@@ -48,7 +43,7 @@ nonisolated final class APIClient: APIClientProtocol {
     }
 
     func login(email: String, password: String) async throws -> AuthResponse {
-        let body = try JSONEncoder().encode(LoginRequest(email: email, password: password))
+        let body = try JSONEncoder().encode(LoginRequest(userName: email, password: password))
         return try await request("/auth/login", method: "POST", body: body)
     }
 
@@ -56,72 +51,46 @@ nonisolated final class APIClient: APIClientProtocol {
         try await request("/auth/me", requiresAuth: true)
     }
 
-    // MARK: - Municipalities and positions
+    // MARK: - Municipalities
 
     func municipalities() async throws -> [Municipality] {
         try await request("/municipalities")
     }
 
-    func municipality(id: Int) async throws -> Municipality {
-        try await request("/municipalities/\(id)")
+    func municipality(slug: String) async throws -> Municipality {
+        try await request("/municipalities/\(try pathSegment(slug))")
     }
 
-    func positions(municipalityId: Int?) async throws -> [Position] {
+    // MARK: - Positions and candidates
+
+    func positions(slug: String) async throws -> [Position] {
+        try await request("/\(try pathSegment(slug))/positions", requiresAuth: true)
+    }
+
+    func candidates(slug: String, search: String?, positionId: Int?) async throws -> [Candidate] {
         var queryItems: [URLQueryItem] = []
-        if let municipalityId {
-            queryItems.append(URLQueryItem(name: "municipalityId", value: String(municipalityId)))
-        }
-        return try await request("/positions", queryItems: queryItems)
-    }
-
-    func position(id: Int) async throws -> Position {
-        try await request("/positions/\(id)")
-    }
-
-    // MARK: - Candidates
-
-    func candidates(municipalityId: Int?, positionId: Int?) async throws -> [Candidate] {
-        let queryItems = filterQueryItems(municipalityId: municipalityId, positionId: positionId)
-        return try await request("/candidates", queryItems: queryItems)
-    }
-
-    func searchCandidates(name: String, municipalityId: Int?, positionId: Int?) async throws -> [Candidate] {
-        let queryItems = [URLQueryItem(name: "name", value: name)]
-            + filterQueryItems(municipalityId: municipalityId, positionId: positionId)
-        return try await request("/candidates/search", queryItems: queryItems)
-    }
-
-    func candidate(id: Int) async throws -> Candidate {
-        try await request("/candidates/\(id)")
-    }
-
-    // MARK: - Voting guide
-
-    func savedCandidates() async throws -> [SavedCandidate] {
-        try await request("/savedcandidates", requiresAuth: true)
-    }
-
-    func saveCandidate(candidateId: Int) async throws -> SavedCandidate {
-        let body = try JSONEncoder().encode(SaveCandidateRequest(candidateId: candidateId))
-        return try await request("/savedcandidates", method: "POST", body: body, requiresAuth: true)
-    }
-
-    // Takes the savedCandidateId, not the candidateId. Returns 204 with no body.
-    func deleteSavedCandidate(savedCandidateId: Int) async throws {
-        _ = try await send("/savedcandidates/\(savedCandidateId)", method: "DELETE", requiresAuth: true)
-    }
-
-    // MARK: - Helpers
-
-    private func filterQueryItems(municipalityId: Int?, positionId: Int?) -> [URLQueryItem] {
-        var queryItems: [URLQueryItem] = []
-        if let municipalityId {
-            queryItems.append(URLQueryItem(name: "municipalityId", value: String(municipalityId)))
+        if let search, !Validators.isBlank(search) {
+            queryItems.append(URLQueryItem(name: "search", value: search.trimmingCharacters(in: .whitespacesAndNewlines)))
         }
         if let positionId {
             queryItems.append(URLQueryItem(name: "positionId", value: String(positionId)))
         }
-        return queryItems
+        return try await request("/\(try pathSegment(slug))/candidates", queryItems: queryItems, requiresAuth: true)
+    }
+
+    func candidate(slug: String, id: Int) async throws -> Candidate {
+        try await request("/\(try pathSegment(slug))/candidates/\(id)", requiresAuth: true)
+    }
+
+    // MARK: - Helpers
+
+    // Slugs are lowercase letters, digits and hyphens. Anything else would let a caller
+    // change the route (e.g. "../"), so it is rejected before the request is built.
+    private func pathSegment(_ slug: String) throws -> String {
+        guard slug.range(of: "^[a-z0-9]+(-[a-z0-9]+)*$", options: .regularExpression) != nil else {
+            throw APIError.network(URLError(.badURL))
+        }
+        return slug
     }
 
     // Sends the request and decodes the success body into Response.

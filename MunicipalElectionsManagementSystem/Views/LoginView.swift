@@ -19,6 +19,14 @@ struct LoginView: View {
 
     var body: some View {
         Form {
+            // Why the user was logged out automatically, e.g. their token expired.
+            if let message = session.sessionMessage {
+                Section {
+                    Label(message, systemImage: "clock.badge.exclamationmark")
+                        .foregroundStyle(.orange)
+                }
+            }
+
             Section {
                 TextField("Email", text: $viewModel.email)
                     .keyboardType(.emailAddress)

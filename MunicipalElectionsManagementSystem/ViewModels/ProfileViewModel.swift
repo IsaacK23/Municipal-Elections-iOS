@@ -29,7 +29,7 @@ final class ProfileViewModel {
         do {
             profile = try await api.me()
         } catch APIError.unauthorized {
-            session.logout()
+            session.expireSession()
         } catch let error as APIError where error.isCancelled {
             // The view went away or the request was replaced; nothing to show.
         } catch {

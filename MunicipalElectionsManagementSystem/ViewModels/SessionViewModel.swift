@@ -10,58 +10,119 @@ import Observation
 
 // The single source of truth for whether the user is logged in.
 // Created in the App struct and passed down with .environment.
+//
+// A session spans two services: the ASP.NET API (JWT in the Keychain) and
+// Firebase (needed for Firestore). Both are signed in and out together.
 @MainActor
 @Observable
 final class SessionViewModel {
     private(set) var isLoggedIn = false
+    // The logged-in user's email; their identifier in Firestore.
+    private(set) var userEmail: String?
+    // Shown on the login screen after an automatic logout, e.g. when the token expires.
+    private(set) var sessionMessage: String?
 
     private let keychain: KeychainService
+    private let firebaseAuth: any FirebaseAuthServicing
+    private var expiryTask: Task<Void, Never>?
 
-    init(keychain: KeychainService = KeychainService()) {
+    init(
+        keychain: KeychainService = KeychainService(),
+        firebaseAuth: any FirebaseAuthServicing = PreviewFirebaseAuthService()
+    ) {
         self.keychain = keychain
+        self.firebaseAuth = firebaseAuth
 
-        if let token = keychain.readToken() {
-            if Self.isExpired(token) {
-                keychain.deleteToken()
-            } else {
-                isLoggedIn = true
-            }
+        // Restore the previous session if its token is still valid.
+        // Firebase keeps its own sign-in across launches.
+        if let token = keychain.readToken(), let email = keychain.readEmail(), !JWT.isExpired(token) {
+            isLoggedIn = true
+            userEmail = email
+            scheduleExpiry(for: token)
+        } else {
+            clearStoredCredentials()
         }
     }
 
-    func login(token: String) {
+    // Called after the API accepted a login or registration.
+    // Signs in to Firebase too; if that fails nothing is stored and the error is rethrown.
+    func signIn(token: String, email: String, password: String, isNewAccount: Bool) async throws {
+        guard !JWT.isExpired(token) else {
+            throw APIError.unauthorized
+        }
+
+        do {
+            try await firebaseAuth.signIn(email: email, password: password, isNewAccount: isNewAccount)
+        } catch {
+            throw SessionError.firebaseSignInFailed
+        }
+
         keychain.saveToken(token)
+        keychain.saveEmail(email)
+        userEmail = email
+        sessionMessage = nil
         isLoggedIn = true
+        scheduleExpiry(for: token)
     }
 
     // Each tab's view model is owned by its view, so switching RootView
     // back to LoginView throws away all cached screen state.
     func logout() {
-        keychain.deleteToken()
+        expiryTask?.cancel()
+        expiryTask = nil
+        firebaseAuth.signOut()
+        clearStoredCredentials()
+        userEmail = nil
         isLoggedIn = false
     }
 
-    // A JWT is header.payload.signature. The payload is base64url-encoded JSON
-    // with an "exp" claim in seconds since 1970. Unreadable tokens count as expired.
-    static func isExpired(_ token: String, now: Date = Date()) -> Bool {
-        let segments = token.split(separator: ".")
-        guard segments.count == 3 else { return true }
-
-        var base64 = String(segments[1])
-            .replacingOccurrences(of: "-", with: "+")
-            .replacingOccurrences(of: "_", with: "/")
-        while base64.count % 4 != 0 {
-            base64 += "="
-        }
-
-        guard let data = Data(base64Encoded: base64),
-              let payload = try? JSONDecoder().decode(JWTPayload.self, from: data) else {
-            return true
-        }
-        return Date(timeIntervalSince1970: payload.exp) <= now
+    // Logs out and tells the user why. Called when the API returns 401 or the token runs out.
+    func expireSession() {
+        guard isLoggedIn else { return }
+        logout()
+        sessionMessage = APIError.unauthorized.localizedDescription
     }
 
-    private struct JWTPayload: Decodable {
-        let exp: TimeInterval
+    // Called when the app returns to the foreground: the timer doesn't run while suspended.
+    func checkExpiry() {
+        guard isLoggedIn else { return }
+        if keychain.readToken().map({ JWT.isExpired($0) }) ?? true {
+            expireSession()
+        }
+    }
+
+    func clearSessionMessage() {
+        sessionMessage = nil
+    }
+
+    // Logs the user out the moment the JWT expires, instead of waiting for a request to fail.
+    private func scheduleExpiry(for token: String) {
+        expiryTask?.cancel()
+        guard let expiry = JWT.expirationDate(of: token) else { return }
+
+        expiryTask = Task { [weak self] in
+            let seconds = expiry.timeIntervalSinceNow
+            if seconds > 0 {
+                try? await Task.sleep(for: .seconds(seconds))
+            }
+            guard !Task.isCancelled else { return }
+            self?.expireSession()
+        }
+    }
+
+    private func clearStoredCredentials() {
+        keychain.deleteToken()
+        keychain.deleteEmail()
+    }
+}
+
+nonisolated enum SessionError: LocalizedError {
+    case firebaseSignInFailed
+
+    var errorDescription: String? {
+        switch self {
+        case .firebaseSignInFailed:
+            return "Signed in, but your saved selections couldn't be reached. Check your connection and try again."
+        }
     }
 }

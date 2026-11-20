@@ -12,22 +12,15 @@ struct MainTabView: View {
 
     var body: some View {
         TabView {
-            // TODO (steps 4-7): replace these placeholders with
-            // MunicipalitiesView(api: api), CandidatesView(api: api) and VotingGuideView(api: api).
-            // Each of those views should own its own NavigationStack, like ProfileView does.
-            placeholder("Municipalities", systemImage: "building.columns")
+            MunicipalitiesView(api: api)
                 .tabItem {
                     Label("Municipalities", systemImage: "building.columns")
                 }
 
-            placeholder("Candidates", systemImage: "person.3")
+            // Replaced by "My Candidate Selections" (Firestore) in Phase 5.
+            placeholder("My Selections", systemImage: "checklist")
                 .tabItem {
-                    Label("Candidates", systemImage: "person.3")
-                }
-
-            placeholder("Voting Guide", systemImage: "checklist")
-                .tabItem {
-                    Label("Voting Guide", systemImage: "checklist")
+                    Label("My Selections", systemImage: "checklist")
                 }
 
             ProfileView(api: api)
