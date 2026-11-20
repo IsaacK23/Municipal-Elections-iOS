@@ -46,12 +46,25 @@ struct MunicipalitiesView: View {
         } else {
             List(viewModel.municipalities) { municipality in
                 NavigationLink(value: municipality) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(municipality.name)
-                            .font(.headline)
-                        Text("Election: \(municipality.formattedElectionDate)")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                    HStack(spacing: 12) {
+                        // Placeholder icon if there is no logo or it fails to load.
+                        AsyncImage(url: APIConfig.imageURL(for: municipality.logoUrl)) { image in
+                            image.resizable().aspectRatio(contentMode: .fit)
+                        } placeholder: {
+                            Image(systemName: "building.columns")
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .foregroundStyle(.gray)
+                        }
+                        .frame(width: 50, height: 50)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(municipality.name)
+                                .font(.headline)
+                            Text("Election: \(municipality.formattedElectionDate)")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     .padding(.vertical, 4)
                 }
