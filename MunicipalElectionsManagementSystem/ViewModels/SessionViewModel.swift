@@ -17,7 +17,7 @@ import Observation
 @Observable
 final class SessionViewModel {
     private(set) var isLoggedIn = false
-    // The logged-in user's email; their identifier in Firestore.
+    // The logged-in user's email, lowercased; their identifier in Firestore.
     private(set) var userEmail: String?
     // Shown on the login screen after an automatic logout, e.g. when the token expires.
     private(set) var sessionMessage: String?
@@ -33,11 +33,12 @@ final class SessionViewModel {
         self.keychain = keychain
         self.firebaseAuth = firebaseAuth
 
-        // Restore the previous session if its token is still valid.
-        // Firebase keeps its own sign-in across launches.
-        if let token = keychain.readToken(), let email = keychain.readEmail(), !JWT.isExpired(token) {
+        // Restore the previous session only if the API token is still valid and Firebase is
+        // still signed in (it keeps its own sign-in across launches). Otherwise log in again.
+        if let token = keychain.readToken(), let email = keychain.readEmail(),
+           !JWT.isExpired(token), firebaseAuth.isSignedIn {
             isLoggedIn = true
-            userEmail = email
+            userEmail = email.lowercased()
             scheduleExpiry(for: token)
         } else {
             clearStoredCredentials()
@@ -57,9 +58,11 @@ final class SessionViewModel {
             throw SessionError.firebaseSignInFailed
         }
 
+        // Emails are case-insensitive; Firestore document ids and security rules use lowercase.
+        let normalizedEmail = email.lowercased()
         keychain.saveToken(token)
-        keychain.saveEmail(email)
-        userEmail = email
+        keychain.saveEmail(normalizedEmail)
+        userEmail = normalizedEmail
         sessionMessage = nil
         isLoggedIn = true
         scheduleExpiry(for: token)

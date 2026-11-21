@@ -61,7 +61,7 @@ final class MunicipalitySettingsViewModel {
             municipality = nil
             state = .needsSelection
         } catch {
-            state = .failed(error.localizedDescription)
+            state = .failed(FirebaseErrorMessage.message(for: error))
         }
     }
 
@@ -87,7 +87,7 @@ final class MunicipalitySettingsViewModel {
             state = .ready
             return true
         } catch {
-            saveError = "Your municipality couldn't be saved. \(error.localizedDescription)"
+            saveError = "Your municipality couldn't be saved. \(FirebaseErrorMessage.message(for: error))"
             return false
         }
     }

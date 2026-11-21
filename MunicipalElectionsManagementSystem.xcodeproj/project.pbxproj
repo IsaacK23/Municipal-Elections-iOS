@@ -6,6 +6,11 @@
 	objectVersion = 110;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		883FFC6230B16FEF007B17AC /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 883FFC6130B16FEF007B17AC /* FirebaseAuth */; };
+		883FFC6430B16FEF007B17AC /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 883FFC6330B16FEF007B17AC /* FirebaseFirestore */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		882255963089D5140014799C /* MunicipalElectionsManagementSystem.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MunicipalElectionsManagementSystem.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -35,6 +40,8 @@
 		882255933089D5140014799C /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
+				883FFC6230B16FEF007B17AC /* FirebaseAuth in Frameworks */,
+				883FFC6430B16FEF007B17AC /* FirebaseFirestore in Frameworks */,
 			);
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -73,6 +80,10 @@
 				882255983089D5140014799C /* MunicipalElectionsManagementSystem */,
 			);
 			name = MunicipalElectionsManagementSystem;
+			packageProductDependencies = (
+				883FFC6130B16FEF007B17AC /* FirebaseAuth */,
+				883FFC6330B16FEF007B17AC /* FirebaseFirestore */,
+			);
 			productName = MunicipalElectionsManagementSystem;
 			productReference = 882255963089D5140014799C /* MunicipalElectionsManagementSystem.app */;
 			productType = "com.apple.product-type.application";
@@ -101,6 +112,9 @@
 			);
 			mainGroup = 8822558D3089D5140014799C;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				883FFC6030B16FEF007B17AC /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 882255973089D5140014799C /* Products */;
 			projectDirPath = "";
@@ -333,6 +347,30 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		883FFC6030B16FEF007B17AC /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = exactVersion;
+				version = 13.1.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		883FFC6130B16FEF007B17AC /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 883FFC6030B16FEF007B17AC /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		883FFC6330B16FEF007B17AC /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 883FFC6030B16FEF007B17AC /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 8822558E3089D5140014799C /* Project object */;
 	validationLevel = 1;

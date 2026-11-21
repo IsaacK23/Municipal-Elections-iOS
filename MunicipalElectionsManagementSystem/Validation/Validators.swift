@@ -76,6 +76,14 @@ nonisolated enum Validators {
         return password == confirmPassword ? nil : "Passwords do not match."
     }
 
+    // Notes on a candidate selection are optional but limited to 500 characters
+    // (the Firestore security rules enforce the same limit).
+    static func notesError(_ value: String) -> String? {
+        let count = value.trimmingCharacters(in: .whitespacesAndNewlines).count
+        return count > CandidateSelection.maxNotesLength
+            ? "Notes must be \(CandidateSelection.maxNotesLength) characters or fewer." : nil
+    }
+
     private static func isASCIILetterOrDigit(_ character: Character) -> Bool {
         ("A"..."Z").contains(character) || ("a"..."z").contains(character)
             || ("0"..."9").contains(character)

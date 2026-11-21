@@ -7,8 +7,17 @@ import SwiftUI
 
 // Candidate directory for one municipality. Pushed inside a NavigationStack;
 // the parent registers the CandidateRoute destination.
+//
+// Adaptive layout:
+// - iPhone portrait: single-column list.
+// - iPhone landscape: list rows show extra details (biography excerpt, contact) across the width.
+// - iPad (portrait and landscape): grid of cards; the adaptive columns add more cards per row
+//   as the width grows, so landscape gets more columns than portrait.
 struct CandidatesView: View {
     @Environment(SessionViewModel.self) private var session
+    @Environment(SelectionsViewModel.self) private var selections
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     @State private var viewModel: CandidatesViewModel
 
     init(api: any APIClientProtocol = APIClient(), municipality: Municipality) {
@@ -60,13 +69,42 @@ struct CandidatesView: View {
                     Button("Clear Filters") { viewModel.clearFilters() }
                 }
             }
+        } else if horizontalSizeClass == .regular {
+            grid
         } else {
             List(viewModel.candidates) { candidate in
-                NavigationLink(value: CandidateRoute(candidate: candidate, municipality: viewModel.municipality)) {
-                    CandidateRow(candidate: candidate)
+                NavigationLink(value: route(for: candidate)) {
+                    CandidateRow(
+                        candidate: candidate,
+                        showsDetails: verticalSizeClass == .compact,
+                        isSelected: isSelected(candidate)
+                    )
                 }
             }
         }
+    }
+
+    private var grid: some View {
+        ScrollView {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 260), spacing: 16)], spacing: 16) {
+                ForEach(viewModel.candidates) { candidate in
+                    NavigationLink(value: route(for: candidate)) {
+                        CandidateCard(candidate: candidate, isSelected: isSelected(candidate))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding()
+        }
+        .background(Color(.systemGroupedBackground))
+    }
+
+    private func route(for candidate: Candidate) -> CandidateRoute {
+        CandidateRoute(candidate: candidate, municipality: viewModel.municipality)
+    }
+
+    private func isSelected(_ candidate: Candidate) -> Bool {
+        selections.selection(forCandidateId: candidate.candidateId) != nil
     }
 
     private var positionMenu: some View {
@@ -91,21 +129,93 @@ struct CandidateRoute: Hashable {
     let municipality: Municipality
 }
 
+// List row. `showsDetails` (iPhone landscape) uses the extra width for a biography
+// excerpt and contact details.
 struct CandidateRow: View {
     let candidate: Candidate
+    var showsDetails = false
+    var isSelected = false
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(alignment: showsDetails ? .top : .center, spacing: 12) {
             CandidatePhotoView(photoUrl: candidate.photoUrl)
             VStack(alignment: .leading, spacing: 4) {
-                Text(candidate.name)
-                    .font(.headline)
+                HStack(spacing: 6) {
+                    Text(candidate.name)
+                        .font(.headline)
+                    if isSelected {
+                        SelectedBadge()
+                    }
+                }
                 Text(candidate.positionName)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
+            .frame(minWidth: 160, alignment: .leading)
+
+            if showsDetails {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(candidate.biography)
+                        .font(.callout)
+                        .lineLimit(2)
+                    if let contact = candidate.email ?? candidate.website {
+                        Text(contact)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .padding(.vertical, 4)
+    }
+}
+
+// Grid card for iPad.
+struct CandidateCard: View {
+    let candidate: Candidate
+    var isSelected = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                CandidatePhotoView(photoUrl: candidate.photoUrl, size: 72)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(candidate.name)
+                        .font(.headline)
+                    Text(candidate.positionName)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    if isSelected {
+                        SelectedBadge()
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            Text(candidate.biography)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .lineLimit(3)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Spacer(minLength: 0)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, minHeight: 170, alignment: .topLeading)
+        .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 16))
+        .contentShape(.rect(cornerRadius: 16))
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+    }
+}
+
+// Marks a candidate that's already in My Candidate Selections.
+struct SelectedBadge: View {
+    var body: some View {
+        Label("Selected", systemImage: "checkmark.circle.fill")
+            .labelStyle(.iconOnly)
+            .foregroundStyle(.green)
+            .accessibilityLabel("In your selections")
     }
 }
 
@@ -114,4 +224,5 @@ struct CandidateRow: View {
         CandidatesView(api: MockAPIClient(), municipality: .burnaby)
     }
     .environment(SessionViewModel())
+    .environment(SelectionsViewModel.preview())
 }

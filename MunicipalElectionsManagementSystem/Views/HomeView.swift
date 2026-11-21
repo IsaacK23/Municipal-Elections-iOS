@@ -17,37 +17,35 @@ struct HomeView: View {
     private var municipality: Municipality { viewModel.municipality }
 
     var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    header
-                }
+        List {
+            Section {
+                header
+            }
 
-                Section("Election") {
-                    LabeledContent("Election Day", value: municipality.formattedElectionDate)
-                    LabeledContent("Province", value: municipality.province)
-                    if let description = municipality.description, !description.isEmpty {
-                        Text(description)
-                            .foregroundStyle(.secondary)
-                    }
+            Section("Election") {
+                LabeledContent("Election Day", value: municipality.formattedElectionDate)
+                LabeledContent("Province", value: municipality.province)
+                if let description = municipality.description, !description.isEmpty {
+                    Text(description)
+                        .foregroundStyle(.secondary)
                 }
+            }
 
-                Section {
-                    positionsContent
-                } header: {
-                    Text("Positions on the Ballot")
-                } footer: {
-                    Text("You can select up to the number of seats for each position.")
-                }
+            Section {
+                positionsContent
+            } header: {
+                Text("Positions on the Ballot")
+            } footer: {
+                Text("You can select up to the number of seats for each position.")
             }
-            .navigationTitle("Home")
-            .navigationSubtitle("City: \(municipality.name)")
-            .task {
-                await viewModel.load(session: session)
-            }
-            .refreshable {
-                await viewModel.load(session: session)
-            }
+        }
+        .navigationTitle("Home")
+        .navigationSubtitle("City: \(municipality.name)")
+        .task {
+            await viewModel.load(session: session)
+        }
+        .refreshable {
+            await viewModel.load(session: session)
         }
     }
 
@@ -101,6 +99,8 @@ struct HomeView: View {
 }
 
 #Preview {
-    HomeView(api: MockAPIClient(), municipality: .burnaby)
-        .environment(SessionViewModel())
+    NavigationStack {
+        HomeView(api: MockAPIClient(), municipality: .burnaby)
+    }
+    .environment(SessionViewModel())
 }
