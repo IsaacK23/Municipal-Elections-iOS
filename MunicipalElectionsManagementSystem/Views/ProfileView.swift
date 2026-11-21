@@ -9,10 +9,14 @@ import SwiftUI
 
 struct ProfileView: View {
     @Environment(SessionViewModel.self) private var session
+    @Environment(MunicipalitySettingsViewModel.self) private var settings
     @State private var viewModel: ProfileViewModel
     @State private var showLogoutConfirmation = false
+    @State private var showMunicipalityPicker = false
+    private let api: any APIClientProtocol
 
     init(api: any APIClientProtocol = APIClient()) {
+        self.api = api
         _viewModel = State(initialValue: ProfileViewModel(api: api))
     }
 
@@ -49,6 +53,24 @@ struct ProfileView: View {
                     }
                 }
 
+                Section {
+                    LabeledContent("City", value: settings.municipality?.name ?? "Not set")
+                    LabeledContent("Last Synchronized") {
+                        if let lastSync = settings.lastSync {
+                            Text(lastSync, format: .dateTime.month().day().hour().minute())
+                        } else {
+                            Text("Never")
+                        }
+                    }
+                    Button("Change Municipality") {
+                        showMunicipalityPicker = true
+                    }
+                } header: {
+                    Text("Municipality")
+                } footer: {
+                    Text("Candidates, positions and your selections are shown for this municipality only.")
+                }
+
                 // Log Out stays available even if the profile failed to load.
                 Section {
                     Button("Log Out", role: .destructive) {
@@ -58,6 +80,7 @@ struct ProfileView: View {
             }
             .listStyle(.insetGrouped)
             .navigationTitle("Profile")
+            .navigationSubtitle("City: \(settings.municipality?.name ?? "Not set")")
             .task {
                 await viewModel.load(session: session)
             }
@@ -74,6 +97,11 @@ struct ProfileView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             }
+            .sheet(isPresented: $showMunicipalityPicker) {
+                NavigationStack {
+                    MunicipalityPickerView(api: api, mode: .change)
+                }
+            }
         }
     }
 }
@@ -81,9 +109,11 @@ struct ProfileView: View {
 #Preview("Profile") {
     ProfileView(api: MockAPIClient())
         .environment(SessionViewModel())
+        .environment(MunicipalitySettingsViewModel.preview())
 }
 
 #Preview("Error") {
     ProfileView(api: MockAPIClient(shouldFail: true))
         .environment(SessionViewModel())
+        .environment(MunicipalitySettingsViewModel.preview())
 }

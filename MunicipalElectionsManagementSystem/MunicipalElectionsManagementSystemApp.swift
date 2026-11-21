@@ -11,11 +11,13 @@ import SwiftUI
 struct MunicipalElectionsManagementSystemApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @State private var session = SessionViewModel()
+    @State private var municipalitySettings = MunicipalitySettingsViewModel()
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environment(session)
+                .environment(municipalitySettings)
         }
         .onChange(of: scenePhase) { _, phase in
             // The expiry timer doesn't fire while the app is suspended.

@@ -85,6 +85,12 @@ struct CandidatesView: View {
     }
 }
 
+// A candidate plus their municipality, so the detail screen can show the election date.
+struct CandidateRoute: Hashable {
+    let candidate: Candidate
+    let municipality: Municipality
+}
+
 struct CandidateRow: View {
     let candidate: Candidate
 
