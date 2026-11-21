@@ -8,10 +8,12 @@
 import Foundation
 
 nonisolated struct Position: Codable, Identifiable, Hashable, Sendable {
-    let id: Int
+    let positionId: Int
     let name: String
-    // How many candidates a voter may choose for this position (e.g. 1 mayor, 5 councillors).
+    // How many candidates a voter may choose for this position (e.g. 1 mayor, 8 councillors).
     let seatsAvailable: Int
     let municipalityId: Int
-    let candidateCount: Int
+    let municipalityName: String
+
+    var id: Int { positionId }
 }

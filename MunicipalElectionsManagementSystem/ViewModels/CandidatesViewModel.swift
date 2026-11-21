@@ -6,8 +6,8 @@
 import Foundation
 import Observation
 
-// Candidate directory for one municipality. Every request goes through
-// /api/{slug}/..., so the API only returns that municipality's data.
+// Candidate directory for one municipality. Every request sends its municipalityId,
+// and the API only returns that municipality's data.
 @MainActor
 @Observable
 final class CandidatesViewModel {
@@ -40,7 +40,7 @@ final class CandidatesViewModel {
 
     func loadPositions(session: SessionViewModel) async {
         do {
-            positions = try await api.positions(slug: municipality.slug)
+            positions = try await api.positions(municipalityId: municipality.municipalityId)
         } catch APIError.unauthorized {
             session.expireSession()
         } catch let error as APIError where error.isCancelled {
@@ -56,7 +56,7 @@ final class CandidatesViewModel {
 
         do {
             candidates = try await api.candidates(
-                slug: municipality.slug,
+                municipalityId: municipality.municipalityId,
                 search: searchText,
                 positionId: selectedPositionId
             )

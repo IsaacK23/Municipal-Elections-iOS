@@ -17,7 +17,7 @@ struct CandidateDetailView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Biography")
                         .font(.title3.bold())
-                    Text(candidate.profile)
+                    Text(candidate.biography)
                 }
 
                 if candidate.website != nil || candidate.email != nil {

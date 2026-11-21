@@ -8,19 +8,17 @@
 import Foundation
 
 nonisolated enum APIConfig {
-    // Root of the MEMS.Api host, without "/api".
-    // Production: the Azure App Service running MEMS.Api with SQLite.
-    // Local: the Aspire YARP gateway (port 5001) in front of MEMS.Api.
-    static let host = "http://localhost:5001"
+    // The A1 ASP.NET Core Web API on Azure App Service (SQLite).
+    // Local development: "http://localhost:5211/api"
+    static let baseURL = "https://mems-isaac-cali-bfgehyf7f0h0fbhm.westus3-01.azurewebsites.net/api"
 
-    static let baseURL = host + "/api"
-
-    // The API returns image URLs relative to its host ("/api/burnaby/images/5").
-    static func imageURL(for path: String?) -> URL? {
-        guard let path, !path.isEmpty else { return nil }
-        if path.hasPrefix("http") {
-            return URL(string: path)
+    // The API builds photo URLs from the incoming request. Behind Azure's proxy that can come back
+    // as http://, which App Transport Security blocks, so non-local URLs are upgraded to https.
+    static func imageURL(for urlString: String?) -> URL? {
+        guard let urlString, var components = URLComponents(string: urlString) else { return nil }
+        if components.scheme == "http", components.host != "localhost", components.host != "127.0.0.1" {
+            components.scheme = "https"
         }
-        return URL(string: host + path)
+        return components.url
     }
 }

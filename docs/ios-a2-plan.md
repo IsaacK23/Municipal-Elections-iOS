@@ -7,6 +7,20 @@
 
 ## Phase 0 — Backend decision: how the iOS app reaches the API
 
+> **Revised (Nov 20): use the A1 API, not the 4976 A2 API.** The iOS spec says "The ASP.NET Core Web API
+> from Assignment #1 will continue to be used" and "Students must use their existing ASP.NET Core Web API".
+> The A1 API already runs on SQLite on Azure, which matches the instructor's advice. It was updated in
+> `Municipal-Elections-Management-System` (branch `ios-a2-municipality-filter`, merged to `main`, which
+> auto-deploys):
+> - `municipalityId` is required on `/api/candidates`, `/api/candidates/search` and `/api/positions`
+>   (400 if missing, 404 if unknown)
+> - get-by-id is scoped to the municipality
+> - `/api/savedcandidates` is removed (selections move to Firestore)
+>
+> The `a1-submission` tag marks the graded A1 state. Nothing changes in `COMP4976-Assignment-2`.
+> The analysis below is kept for reference; D0 and sections 0.1–0.3 no longer apply. Firestore stores
+> `municipalityId` + `municipalityName` instead of a slug (D3).
+
 ### The problem
 
 | Constraint | Source |

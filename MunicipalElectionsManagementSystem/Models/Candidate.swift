@@ -8,15 +8,17 @@
 import Foundation
 
 nonisolated struct Candidate: Codable, Identifiable, Hashable, Sendable {
-    let id: Int
+    let candidateId: Int
     let name: String
-    // The candidate's biography. The API calls it "profile".
-    let profile: String
+    let biography: String
+    // Absolute URL of the uploaded photo, or nil. Load it with APIConfig.imageURL(for:).
+    let photoUrl: String?
     let website: String?
     let email: String?
     let positionId: Int
     let positionName: String
     let municipalityId: Int
-    // Relative to the API host, e.g. "/api/burnaby/images/5". Use APIConfig.imageURL(for:).
-    let photoUrl: String?
+    let municipalityName: String
+
+    var id: Int { candidateId }
 }

@@ -18,23 +18,23 @@ nonisolated struct MockAPIClient: APIClientProtocol {
         }
     }
 
-    private func municipalityId(for slug: String) throws -> Int {
-        guard let municipality = Municipality.samples.first(where: { $0.slug == slug }) else {
+    // Same response as the real API for an unknown municipality.
+    private func requireMunicipality(_ id: Int) throws {
+        guard Municipality.samples.contains(where: { $0.municipalityId == id }) else {
             throw APIError.server(status: 404, message: "Municipality not found.")
         }
-        return municipality.id
     }
 
     // MARK: - Auth
 
     func register(name: String, email: String, password: String) async throws -> AuthResponse {
         try check()
-        return AuthResponse(token: "preview-token", userName: email, role: "Voter")
+        return AuthResponse(token: "preview-token")
     }
 
     func login(email: String, password: String) async throws -> AuthResponse {
         try check()
-        return AuthResponse(token: "preview-token", userName: email, role: "Voter")
+        return AuthResponse(token: "preview-token")
     }
 
     func me() async throws -> UserProfile {
@@ -49,9 +49,9 @@ nonisolated struct MockAPIClient: APIClientProtocol {
         return Municipality.samples
     }
 
-    func municipality(slug: String) async throws -> Municipality {
+    func municipality(id: Int) async throws -> Municipality {
         try check()
-        guard let municipality = Municipality.samples.first(where: { $0.slug == slug }) else {
+        guard let municipality = Municipality.samples.first(where: { $0.municipalityId == id }) else {
             throw APIError.server(status: 404, message: "Municipality not found.")
         }
         return municipality
@@ -59,26 +59,26 @@ nonisolated struct MockAPIClient: APIClientProtocol {
 
     // MARK: - Positions and candidates
 
-    func positions(slug: String) async throws -> [Position] {
+    func positions(municipalityId: Int) async throws -> [Position] {
         try check()
-        let id = try municipalityId(for: slug)
-        return Position.samples.filter { $0.municipalityId == id }
+        try requireMunicipality(municipalityId)
+        return Position.samples.filter { $0.municipalityId == municipalityId }
     }
 
-    func candidates(slug: String, search: String?, positionId: Int?) async throws -> [Candidate] {
+    func candidates(municipalityId: Int, search: String?, positionId: Int?) async throws -> [Candidate] {
         try check()
-        let id = try municipalityId(for: slug)
+        try requireMunicipality(municipalityId)
         let term = search ?? ""
         return Candidate.samples.filter { candidate in
-            candidate.municipalityId == id
+            candidate.municipalityId == municipalityId
                 && (positionId == nil || candidate.positionId == positionId)
                 && (Validators.isBlank(term) || candidate.name.localizedCaseInsensitiveContains(term))
         }
     }
 
-    func candidate(slug: String, id: Int) async throws -> Candidate {
-        let candidates = try await candidates(slug: slug, search: nil, positionId: nil)
-        guard let candidate = candidates.first(where: { $0.id == id }) else {
+    func candidate(id: Int, municipalityId: Int) async throws -> Candidate {
+        let candidates = try await candidates(municipalityId: municipalityId, search: nil, positionId: nil)
+        guard let candidate = candidates.first(where: { $0.candidateId == id }) else {
             throw APIError.server(status: 404, message: "Candidate not found.")
         }
         return candidate
@@ -87,93 +87,92 @@ nonisolated struct MockAPIClient: APIClientProtocol {
 
 // MARK: - Sample data
 
+nonisolated extension Position {
+    static let burnabyMayor = Position(
+        positionId: 7, name: "Mayor", seatsAvailable: 1, municipalityId: 3, municipalityName: "Burnaby"
+    )
+    static let burnabyCouncillor = Position(
+        positionId: 8, name: "Councilor", seatsAvailable: 8, municipalityId: 3, municipalityName: "Burnaby"
+    )
+    static let pittMeadowsMayor = Position(
+        positionId: 1, name: "Mayor", seatsAvailable: 1, municipalityId: 1, municipalityName: "Pitt Meadows"
+    )
+
+    static let samples = [burnabyMayor, burnabyCouncillor, pittMeadowsMayor]
+}
+
 nonisolated extension Municipality {
     static let burnaby = Municipality(
-        id: 1,
+        municipalityId: 3,
         name: "Burnaby",
-        slug: "burnaby",
         province: "British Columbia",
         electionDate: "2026-10-17",
         description: "A city in Metro Vancouver, home to Simon Fraser University.",
-        themeColor: "#1f6f8b",
-        logoUrl: nil
+        logoUrl: nil,
+        positions: [.burnabyMayor, .burnabyCouncillor]
     )
 
-    static let surrey = Municipality(
-        id: 2,
-        name: "Surrey",
-        slug: "surrey",
+    static let pittMeadows = Municipality(
+        municipalityId: 1,
+        name: "Pitt Meadows",
         province: "British Columbia",
         electionDate: "2026-10-17",
-        description: "The second-largest city in British Columbia.",
-        themeColor: "#2e7d32",
-        logoUrl: nil
+        description: "A small city on the north side of the Fraser River.",
+        logoUrl: nil,
+        positions: [.pittMeadowsMayor]
     )
 
-    static let samples = [burnaby, surrey]
-}
-
-nonisolated extension Position {
-    static let burnabyMayor = Position(id: 1, name: "Mayor", seatsAvailable: 1, municipalityId: 1, candidateCount: 2)
-    static let burnabyCouncillor = Position(id: 2, name: "Councillor", seatsAvailable: 8, municipalityId: 1, candidateCount: 1)
-    static let surreyMayor = Position(id: 3, name: "Mayor", seatsAvailable: 1, municipalityId: 2, candidateCount: 1)
-
-    static let samples = [burnabyMayor, burnabyCouncillor, surreyMayor]
+    static let samples = [burnaby, pittMeadows]
 }
 
 nonisolated extension Candidate {
     static let eleanorVasquez = Candidate(
-        id: 1,
+        candidateId: 1,
         name: "Eleanor Vasquez",
-        profile: "Eleanor Vasquez has served on Burnaby council for eight years and is running for Mayor "
+        biography: "Eleanor Vasquez has served on Burnaby council for eight years and is running for Mayor "
             + "on a platform of affordable housing and better transit.",
+        photoUrl: nil,
         website: "https://example.com/eleanor-vasquez",
         email: "eleanor.vasquez@example.com",
-        positionId: 1,
+        positionId: 7,
         positionName: "Mayor",
-        municipalityId: 1,
-        photoUrl: nil
+        municipalityId: 3,
+        municipalityName: "Burnaby"
     )
 
-    static let marcusLee = Candidate(
-        id: 2,
-        name: "Marcus Lee",
-        profile: "Marcus Lee is a small-business owner running for Mayor of Burnaby.",
+    static let carolinePrice = Candidate(
+        candidateId: 27,
+        name: "Caroline Price",
+        biography: "Caroline Price is running for Councilor in Burnaby.",
+        photoUrl: nil,
         website: nil,
-        email: "marcus.lee@example.com",
-        positionId: 1,
-        positionName: "Mayor",
-        municipalityId: 1,
-        photoUrl: nil
+        email: "caroline.price@example.com",
+        positionId: 8,
+        positionName: "Councilor",
+        municipalityId: 3,
+        municipalityName: "Burnaby"
     )
 
     static let weiZhang = Candidate(
-        id: 3,
+        candidateId: 2,
         name: "Wei Zhang",
-        profile: "Wei Zhang is running for Councillor in Burnaby.",
+        biography: "Wei Zhang is running for Mayor of Pitt Meadows.",
+        photoUrl: nil,
         website: nil,
         email: "wei.zhang@example.com",
-        positionId: 2,
-        positionName: "Councillor",
-        municipalityId: 1,
-        photoUrl: nil
-    )
-
-    static let priyaSingh = Candidate(
-        id: 4,
-        name: "Priya Singh",
-        profile: "Priya Singh is running for Mayor of Surrey.",
-        website: "https://example.com/priya-singh",
-        email: nil,
-        positionId: 3,
+        positionId: 1,
         positionName: "Mayor",
-        municipalityId: 2,
-        photoUrl: nil
+        municipalityId: 1,
+        municipalityName: "Pitt Meadows"
     )
 
-    static let samples = [eleanorVasquez, marcusLee, weiZhang, priyaSingh]
+    static let samples = [eleanorVasquez, carolinePrice, weiZhang]
 }
 
 nonisolated extension UserProfile {
-    static let sample = UserProfile(name: "Jane Voter", email: "jane@example.com")
+    static let sample = UserProfile(
+        id: "547448f4-0000-0000-0000-000000000000",
+        name: "Jane Voter",
+        email: "jane@example.com"
+    )
 }
